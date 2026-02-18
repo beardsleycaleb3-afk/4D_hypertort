@@ -3,13 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SULTAN 47 | 5D HYPERSLICE</title>
+    <title>SULTAN_SOVEREIGN 5D</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-        canvas { width: 100vw; height: 100vh; display: block; }
+        :root { --neon: #00ff00; --glow: #00ff88; --magenta: #ff00ff; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* HUD LAYOUT ZONES (Section 8) */
+        #hud {
+            position: absolute; top: 10px; left: 10px; z-index: 10;
+            color: var(--neon); text-shadow: 0 0 5px var(--neon);
+            pointer-events: none; font-size: 12px;
+        }
+        .metric { border-left: 2px solid var(--neon); padding-left: 5px; margin-bottom: 5px; background: rgba(0,0,0,0.5); }
+
+        /* TOGGLE BUTTONS (Section 2) */
+        #controls {
+            position: absolute; bottom: 20px; width: 100%;
+            display: flex; justify-content: center; gap: 10px; z-index: 10;
+        }
+        .btn {
+            width: 50px; height: 50px; border: 1px solid var(--neon);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0, 40, 0, 0.8); color: white; font-size: 10px;
+            cursor: pointer; box-shadow: 0 0 10px var(--neon);
+        }
+        .btn:active { background: var(--neon); color: black; }
     </style>
 </head>
 <body>
+    <div id="hud">
+        <div class="metric">TICK: <span id="m_tick">00000</span></div>
+        <div class="metric">SPUN: <span id="m_rpm">285K</span></div>
+        <div class="metric">L©SS: <span id="m_mass">124K</span></div>
+        <div class="metric">CYCLE: 62</div>
+    </div>
+
+    <div id="controls">
+        <div class="btn" onclick="haptic(50)">[H]<span>BOOST</span></div>
+        <div class="btn" onclick="haptic(10)">[∆]<span>CYCLE</span></div>
+        <div class="btn" style="border-color:var(--magenta)" onclick="haptic(20)">[§]<span>INJECT</span></div>
+        <div class="btn" onclick="haptic(100)">[▶️]<span>MASTER</span></div>
+    </div>
+
     <canvas id="manifold"></canvas>
 
 <script type="glsl" id="vs">
@@ -21,38 +57,28 @@
     precision highp float;
     uniform float time;
     uniform vec2 res;
+    uniform float rpm;
 
-    // Sultan 47 Algebra: 1ZXX-o00o-1YY → 5D Extrusion
     mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
 
     void main() {
         vec2 uv = (gl_FragCoord.xy - 0.5 * res.xy) / min(res.y, res.x);
-        vec3 col = vec3(0.0);
-        
-        // 5th Dimension Vector (The K-Factor)
-        float k = sin(time * 0.144); 
+        // Physics Tuning: Core rotation (Section 7)
+        float coreRot = time * (rpm / 50000.0);
         
         vec3 ray = vec3(uv, 1.0);
         float t = 0.0;
-        
-        for(int i=0; i<32; i++) { // 28:8 Mid-Layer Slicing
+        for(int i=0; i<24; i++) {
             vec3 p = ray * t;
-            // 5D Symmetry Fold
-            p.xy *= rot(time * 0.5 + k);
-            p.xz *= rot(time * 0.3);
-            
-            // The G.O.G. Law: 1*1=2=o0 Geometry
-            float d = length(p.xy) - 0.5 + (sin(p.z * 14.4 + time) * 0.1);
-            d = max(d, abs(p.z) - 0.1); // Slice Thickness
-            
-            if(d < 0.001 || t > 10.0) break;
+            p.xy *= rot(coreRot);
+            p.xz *= rot(time * 0.2);
+            float d = length(p.xy) - 0.5 + (sin(p.z * 10.0 + time) * 0.1);
+            if(d < 0.001) break;
             t += d;
         }
-
-        // oO00oO1GlF+ Genesis Lighting
-        col = vec3(0.1, 0.4, 1.0) * (1.0 / (1.0 + t * t * 0.5));
-        col += vec3(0.5, 0.8, 1.0) * pow(max(0.0, 1.0 - t * 0.2), 10.0);
-        
+        // Section 3: Nuclear Theme Colors
+        vec3 col = vec3(0.0, 1.0, 0.3) * (1.0/t); 
+        if(mod(gl_FragCoord.y, 4.0) < 2.0) col *= 0.8; // Scanline (Section 7)
         gl_FragColor = vec4(col, 1.0);
     }
 </script>
@@ -60,41 +86,60 @@
 <script>
     const canvas = document.getElementById('manifold');
     const gl = canvas.getContext('webgl');
-    
-    function createShader(gl, type, source) {
-        const s = gl.createShader(type);
-        gl.shaderSource(s, source);
-        gl.compileShader(s);
-        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-            console.error(gl.getShaderInfoLog(s));
-        }
-        return s;
+    let rpm = 285000;
+
+    // Haptic Personality (Section 6)
+    function haptic(ms) {
+        if (navigator.vibrate) navigator.vibrate(ms);
+        rpm += 5000;
+        document.getElementById('m_rpm').innerText = (rpm/1000).toFixed(0) + "K";
     }
 
+    // Audio Profile: 174Hz Drone (Section 5)
+    let audioCtx;
+    function initAudio() {
+        if(audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle'; 
+        osc.frequency.setValueAtTime(174, audioCtx.currentTime); // o00o Drone
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+    }
+    document.body.addEventListener('touchstart', initAudio, {once: true});
+
+    // Standard Manifold Boilerplate...
     const program = gl.createProgram();
+    function createShader(gl, type, source) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, source); gl.compileShader(s); return s;
+    }
     gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, document.getElementById('vs').text));
     gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById('fs').text));
-    gl.linkProgram(program);
-    gl.useProgram(program);
+    gl.linkProgram(program); gl.useProgram(program);
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-
     const pos = gl.getAttribLocation(program, "position");
     gl.enableVertexAttribArray(pos);
     gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
 
     const tLoc = gl.getUniformLocation(program, "time");
     const rLoc = gl.getUniformLocation(program, "res");
+    const rpmLoc = gl.getUniformLocation(program, "rpm");
 
     function render(t) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.uniform1f(tLoc, t * 0.001);
         gl.uniform2f(rLoc, canvas.width, canvas.height);
+        gl.uniform1f(rpmLoc, rpm);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+        document.getElementById('m_tick').innerText = Math.floor(t).toString().padStart(5, '0');
         requestAnimationFrame(render);
     }
     render(0);
