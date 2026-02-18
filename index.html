@@ -3,75 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SULTAN_SOVEREIGN 10-FOLD</title>
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22SULTAN_SOVEREIGN%22,%22short_name%22:%22S47%22,%22start_url%22:%22index.html%22,%22display%22:%22standalone%22,%22background_color%22:%22%23000000%22,%22theme_color%22:%22%2300ff00%22,%22orientation%22:%22portrait%22}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SULTAN_SOVEREIGN</title>
     <style>
         :root { --neon: #00ff00; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: monospace; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: monospace; color: white; }
         canvas { position: absolute; top: 0; left: 0; z-index: 1; }
-        #preset-bar { 
-            position: absolute; top: 0; width: 100%; display: grid; 
-            grid-template-columns: repeat(5, 1fr); gap: 2px; z-index: 20; 
-        }
-        .p-btn { 
-            background: rgba(0,0,0,0.8); color: #fff; border: 1px solid #333; 
-            font-size: 8px; padding: 10px 0; text-align: center; 
-        }
-        #hud { position: absolute; top: 80px; left: 10px; z-index: 10; color: var(--neon); pointer-events: none; }
-        #controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 5px; z-index: 10; }
-        .btn { width: 45px; height: 45px; border: 1px solid var(--neon); color: #fff; font-size: 9px; display: flex; align-items: center; justify-content: center; background: #000; }
+        #pwa-bar { position: absolute; top: 0; width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); z-index: 20; background: rgba(0,0,0,0.9); }
+        .p-btn { border: 1px solid #222; font-size: 10px; padding: 15px 0; text-align: center; color: var(--neon); }
+        #hud { position: absolute; top: 100px; left: 15px; z-index: 10; pointer-events: none; }
+        .metric { border-left: 3px solid var(--neon); padding-left: 8px; margin-bottom: 8px; font-size: 14px; background: rgba(0,0,0,0.4); }
+        #controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 10; }
+        .btn { width: 70px; height: 70px; border: 2px solid var(--neon); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
-    <div id="preset-bar">
+    <div id="pwa-bar">
         <div class="p-btn" onclick="setMode('NUCLEAR')">NUCL</div>
         <div class="p-btn" onclick="setMode('AGGRESSIVE')">AGGR</div>
         <div class="p-btn" onclick="setMode('COSMIC')">COSM</div>
         <div class="p-btn" onclick="setMode('STEALTH')">STLTH</div>
-        <div class="p-btn" onclick="setMode('FUSION')">FUSN</div>
-        <div class="p-btn" onclick="setMode('CELTIC')">CELT</div>
-        <div class="p-btn" onclick="setMode('BEETHOVEN')">BEET</div>
         <div class="p-btn" onclick="setMode('VOID')">VOID</div>
-        <div class="p-btn" onclick="setMode('SPARK')">SPRK</div>
-        <div class="p-btn" onclick="setMode('GOG')">GOG</div>
     </div>
 
     <div id="hud">
-        <div>MODE: <span id="m_name">NUCLEAR</span></div>
-        <div>RPM: <span id="m_rpm">285K</span></div>
+        <div class="metric">MODE: <span id="m_name">NUCLEAR</span></div>
+        <div class="metric">SPUN: <span id="m_rpm">285K</span></div>
+        <div class="metric">LAW: 1*1=2=o0</div>
+    </div>
+
+    <div id="controls">
+        <div class="btn" onclick="haptic(100)">BOOST</div>
+        <div class="btn" onclick="haptic(20)">SPARK</div>
     </div>
 
     <canvas id="manifold"></canvas>
 
-<script>
-    const canvas = document.getElementById('manifold');
-    const gl = canvas.getContext('webgl');
-    let currentRPM = 285000;
-    let currentColor = [0.0, 1.0, 0.0];
+    <script type="glsl" id="vs">
+        attribute vec2 position; void main() { gl_Position = vec4(position, 0.0, 1.0); }
+    </script>
+    <script type="glsl" id="fs">
+        precision highp float;
+        uniform float time; uniform vec2 res; uniform vec3 col; uniform float rpm;
+        mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+        void main() {
+            vec2 uv = (gl_FragCoord.xy - 0.5 * res.xy) / min(res.y, res.x);
+            vec3 ray = vec3(uv, 1.0);
+            float t = 0.0;
+            for(int i=0; i<24; i++) {
+                vec3 p = ray * t;
+                p.xy *= rot(time * (rpm/120000.0));
+                p.xz *= rot(time * 0.2);
+                float d = length(p.xy) - 0.5 + (sin(p.z * 14.4) * 0.05);
+                if(d < 0.001) break;
+                t += d;
+            }
+            vec3 finalCol = col * (1.2/t);
+            if(mod(gl_FragCoord.y, 4.0) < 2.0) finalCol *= 0.7;
+            gl_FragColor = vec4(finalCol, 1.0);
+        }
+    </script>
 
-    const PRESETS = {
-        NUCLEAR: { rpm: 285000, col: [0.0, 1.0, 0.3], wave: 'triangle' },
-        AGGRESSIVE: { rpm: 750000, col: [1.0, 0.1, 0.0], wave: 'sawtooth' },
-        COSMIC: { rpm: 120000, col: [0.3, 0.0, 1.0], wave: 'sine' },
-        STEALTH: { rpm: 47000, col: [0.5, 0.5, 0.5], wave: 'square' },
-        FUSION: { rpm: 500000, col: [1.0, 0.8, 0.0], wave: 'square' },
-        CELTIC: { rpm: 174000, col: [0.1, 0.6, 0.2], wave: 'sine' },
-        BEETHOVEN: { rpm: 330000, col: [0.8, 0.6, 0.4], wave: 'triangle' },
-        VOID: { rpm: 0, col: [0.05, 0.05, 0.05], wave: 'sine' },
-        SPARK: { rpm: 999000, col: [1.0, 1.0, 1.0], wave: 'sawtooth' },
-        GOG: { rpm: 444000, col: [0.5, 1.0, 0.8], wave: 'triangle' }
-    };
+    <script>
+        // 1. INLINE SERVICE WORKER (PWA Offline Capability)
+        const swCode = `
+            self.addEventListener('install', e => e.waitUntil(caches.open('v1').then(c => c.add('index.html'))));
+            self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+        `;
+        const blob = new Blob([swCode], {type: 'application/javascript'});
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(URL.createObjectURL(blob));
+        }
 
-    function setMode(mode) {
-        const p = PRESETS[mode];
-        currentRPM = p.rpm;
-        currentColor = p.col;
-        document.getElementById('m_name').innerText = mode;
-        document.getElementById('m_rpm').innerText = (p.rpm/1000) + "K";
-        if (navigator.vibrate) navigator.vibrate(50);
-    }
+        // 2. CORE SYSTEM SETUP
+        const canvas = document.getElementById('manifold');
+        const gl = canvas.getContext('webgl');
+        let currentRPM = 285000;
+        let currentColor = [0.0, 1.0, 0.3];
+        let audioCtx, osc;
 
-    // [Standard WebGL Boilerplate & 5D Shader Logic Goes Here - Same as previous build]
-    // Note: Use currentRPM and currentColor uniforms in the fragment shader.
-</script>
+        const PRESETS = {
+            NUCLEAR: { rpm: 285000, col: [0.0, 1.0, 0.3], wave: 'triangle' },
+            AGGRESSIVE: { rpm: 950000, col: [1.0, 0.1, 0.0], wave: 'sawtooth' },
+            COSMIC: { rpm: 120000, col: [0.4, 0.0, 1.0], wave: 'sine' },
+            STEALTH: { rpm: 47000, col: [0.6, 0.6, 0.6], wave: 'square' },
+            VOID: { rpm: 0, col: [0.05, 0.05, 0.05], wave: 'sine' }
+        };
+
+        // 3. AUDIO & HAPTIC
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(174, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start();
+        }
+
+        function haptic(ms) {
+            initAudio();
+            if (navigator.vibrate) navigator.vibrate(ms);
+        }
+
+        function setMode(mode) {
+            initAudio();
+            const p = PRESETS[mode];
+            currentRPM = p.rpm; currentColor = p.col;
+            document.getElementById('m_name').innerText = mode;
+            document.getElementById('m_rpm').innerText = (p.rpm/1000) + "K";
+            if(osc) {
+                osc.type = p.wave;
+                osc.frequency.setTargetAtTime(174 + (p.rpm/4000), audioCtx.currentTime, 0.2);
+            }
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        // 4. SHADER COMPILATION
+        const program = gl.createProgram();
+        function createS(gl, type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
+        gl.attachShader(program, createS(gl, gl.VERTEX_SHADER, document.getElementById('vs').text));
+        gl.attachShader(program, createS(gl, gl.FRAGMENT_SHADER, document.getElementById('fs').text));
+        gl.linkProgram(program); gl.useProgram(program);
+
+        const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+        const pos = gl.getAttribLocation(program, "position"); gl.enableVertexAttribArray(pos);
+        gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+
+        const tLoc = gl.getUniformLocation(program, "time"), rLoc = gl.getUniformLocation(program, "res"), cLoc = gl.getUniformLocation(program, "col"), rpmLoc = gl.getUniformLocation(program, "rpm");
+
+        // 5. RENDER LOOP (60FPS LOCKED)
+        function render(t) {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.uniform1f(tLoc, t * 0.001); gl.uniform2f(rLoc, canvas.width, canvas.height);
+            gl.uniform3fv(cLoc, currentColor); gl.uniform1f(rpmLoc, currentRPM);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            requestAnimationFrame(render);
+        }
+        render(0);
+    </script>
 </body>
 </html>
