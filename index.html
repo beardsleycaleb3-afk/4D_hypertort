@@ -3,155 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Sultan Console</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Sultan Sovereign</title>
     <style>
-        :root { --gold: #ffd700; --panel: #151515; --border: #333; }
-        
-        body, html { 
-            margin: 0; padding: 0; height: 100vh; width: 100vw;
-            background: #000; overflow: hidden; font-family: monospace;
-        }
+        :root { --gold: #ffd700; --plasma: #00ff88; --magenta: #ff00ff; --panel: #0d0d0d; }
+        body, html { margin: 0; padding: 0; height: 100vh; background: #000; color: var(--gold); font-family: monospace; overflow: hidden; }
 
-        /* 1. THE MAIN CONSOLE GRID */
-        #console-container {
-            display: grid;
-            grid-template-rows: 60px 1fr 120px; /* Top, Middle, Bottom */
-            height: 100vh;
-            width: 100vw;
-        }
+        /* 1. HUD & TOP TELEMETRY */
+        #hud-header { height: 60px; display: flex; justify-content: space-between; padding: 10px 15px; background: var(--panel); border-bottom: 2px solid #222; z-index: 5; }
+        #telemetry-left { font-size: 10px; }
+        #telemetry-right { text-align: right; }
 
-        /* 2. TOP PANEL (Status & RPM) */
-        #top-panel {
-            background: var(--panel);
-            border-bottom: 2px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 15px;
-            color: var(--gold);
-        }
+        /* 2. MAIN VIEWPORT (70%) */
+        #reactor-main { height: 70vh; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
-        #top-status { font-size: 10px; line-height: 1.2; }
-        #top-rpm { text-align: right; }
-        #top-rpm span { display: block; font-size: 18px; font-weight: bold; }
+        /* 3. FUSION TUBES & BUBBLES */
+        .tube { position: absolute; width: 12px; height: 70vh; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.1); left: 0; top: 0; }
+        .bubble { position: absolute; width: 6px; height: 10px; background: var(--plasma); border-radius: 50%; filter: blur(1px); animation: flow 2.5s infinite linear; opacity: 0; }
+        @keyframes flow { 0% { bottom: -10px; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 70vh; opacity: 0; } }
 
-        /* 3. MIDDLE VIEWPORT (The Game) */
-        #game-view {
-            position: relative;
-            background: #000;
-            overflow: hidden;
-        }
-        canvas { display: block; }
+        /* 4. SETTINGZ GEAR */
+        #gear-zone { position: absolute; right: 20px; color: var(--magenta); text-align: center; }
+        .gear-s { width: 42px; height: 42px; border: 2px dashed var(--magenta); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
 
-        /* Floating Gear on the Right Side of Viewport */
-        #settings-gear {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            text-align: center;
-            color: #ff00ff;
-        }
-        .gear-icon { 
-            width: 45px; height: 45px; border: 2px dashed #ff00ff; 
-            border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; font-weight: bold;
-        }
-
-        /* 4. BOTTOM DOCK (The 30px Buttons) */
-        #bottom-panel {
-            background: var(--panel);
-            border-top: 2px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .btn-row { display: flex; gap: 10px; }
-        
-        /* Fixed 30px Height as requested */
-        .console-btn {
-            height: 30px;
-            min-width: 90px;
-            background: #222;
-            border: 1px solid #555;
-            color: white;
-            font-size: 11px;
-            text-transform: uppercase;
-            cursor: pointer;
-        }
-        .btn-red { border-color: #f00; color: #f00; }
-
+        /* 5. CONTROL DOCK (30%) */
+        #control-dock { height: calc(30vh - 60px); background: var(--panel); border-top: 2px solid #222; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; padding-bottom: env(safe-area-inset-bottom); }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .console-btn { height: 30px; background: #1a1a1a; border: 1px solid #444; color: #fff; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .btn-glow { border-color: var(--plasma); color: var(--plasma); }
     </style>
 </head>
 <body>
 
-<div id="console-container">
-    
-    <header id="top-panel">
-        <div id="top-status">
-            G.O.G. LAW: 1*1=2<br>
-            32-BIT STABLE<br>
-            36° MANIFOLD
-        </div>
-        <div id="top-rpm">
-            <small>RPM</small>
-            <span id="rpm-display">15,000</span>
-        </div>
+    <header id="hud-header">
+        <div id="telemetry-left">TICK: 00247<br>L©SS: 124K<br>LAW: 1*1=2</div>
+        <div id="telemetry-right">SPUN: <span id="rpm">15,000</span><br>STATUS: STABLE</div>
     </header>
 
-    <main id="game-view">
-        <div id="settings-gear">
-            <div class="gear-icon">S</div>
+    <main id="reactor-main">
+        <div class="tube">
+            <div class="bubble" style="animation-delay: 0s"></div>
+            <div class="bubble" style="animation-delay: 0.8s"></div>
+            <div class="bubble" style="animation-delay: 1.6s"></div>
+        </div>
+        
+        <div id="gear-zone">
+            <div class="gear-s">S</div>
             <small>SETTINGZ</small>
         </div>
-        </main>
 
-    <footer id="bottom-panel">
-        <div class="btn-row">
-            <button class="console-btn btn-red">RPM+</button>
-            <button class="console-btn">SOUNDS</button>
+        <div id="canvas-target"></div>
+    </main>
+
+    <footer id="control-dock">
+        <div class="btn-grid">
+            <button class="console-btn btn-glow" onclick="haptic(50)">[H] BOOST</button>
+            <button class="console-btn" onclick="haptic(10)">[∆] CYCLE</button>
+            <button class="console-btn" style="grid-column: span 2;" onclick="haptic(30)">[§] INJECT G.O.G.</button>
         </div>
-        <div class="btn-row">
-            <button class="console-btn">MOCKT</button>
+        <div class="btn-grid">
+            <button class="console-btn">AUTO/MAN</button>
+            <button class="console-btn">MUTE</button>
+            <button class="console-btn" style="grid-column: span 2;">START MANIFOLD</button>
         </div>
     </footer>
 
-</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // PWA REGISTRATION
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-    // Your Three.js logic goes here. 
-    // Just make sure to append the renderer to 'game-view'
-    const container = document.getElementById('game-view');
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-
-    // Initial Spheres
-    const inner = new THREE.Mesh(new THREE.SphereGeometry(2, 10, 10), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true}));
-    scene.add(inner);
-    camera.position.z = 10;
-
-    function animate() {
-        inner.rotation.y += 0.01;
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
-    }
-    animate();
-
-    window.onresize = () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
+        // THREE.JS GEOMETRY
+        const container = document.getElementById('reactor-main');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
-    };
-</script>
+        container.appendChild(renderer.domElement);
 
+        const inner = new THREE.Mesh(new THREE.SphereGeometry(2, 20, 20), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true}));
+        const outer = new THREE.Mesh(new THREE.SphereGeometry(4, 15, 15), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true, transparent: true, opacity: 0.2}));
+        scene.add(inner, outer);
+        camera.position.z = 12;
+
+        function haptic(ms) { if(navigator.vibrate) navigator.vibrate(ms); }
+
+        function animate() {
+            inner.rotation.y += 0.01;
+            outer.rotation.y -= 0.005;
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
 </body>
 </html>
