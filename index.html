@@ -3,108 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Sultan Console</title>
+    <title>Sultan Touch Console</title>
     <style>
         :root { --gold: #ffd700; --plasma: #00ff88; --magenta: #ff00ff; }
         
-        /* 1. THE CONSOLE FRAME */
-        body, html { 
-            margin: 0; padding: 0; height: 100vh; width: 100vw;
-            background: #000; overflow: hidden; font-family: 'Courier New', monospace;
+        /* 1. FORCE THE LAYOUT */
+        * { touch-action: none; user-select: none; box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100vw; background: #000; overflow: hidden; font-family: monospace; }
+
+        /* HUD (Zone 8) */
+        #hud {
+            height: 15%; width: 100%; border-bottom: 2px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 15px; color: var(--gold); font-size: 12px;
         }
 
-        /* Top HUD - Fixed and Bold */
-        #hud-top {
-            height: 15vh; width: 100%; 
-            display: flex; justify-content: space-between; padding: 10px;
-            box-sizing: border-box; border-bottom: 3px solid #333;
-            background: #0a0a0a; color: var(--gold); font-weight: bold;
-        }
+        /* REACTOR VIEWPORT (70%) */
+        #viewport { height: 55%; width: 100%; position: relative; overflow: hidden; }
 
-        /* 2. THE REACTOR VIEW (Bubbles + 3D) */
-        #reactor-view { 
-            height: 55vh; width: 100vw; position: relative; 
-            background: radial-gradient(circle, #111, #000);
-        }
+        /* PLASMA TUBES (Zone 11) */
+        .tube { position: absolute; left: 10px; width: 15px; height: 100%; border: 1px solid var(--plasma); background: rgba(0,255,136,0.1); }
+        .bubble { position: absolute; width: 10px; height: 10px; background: var(--plasma); border-radius: 50%; box-shadow: 0 0 10px var(--plasma); animation: flow 1.2s infinite linear; }
+        @keyframes flow { 0% { bottom: -10px; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 100%; opacity: 0; } }
 
-        /* THE TUBE & BUBBLES - Hard Coded Visibility */
-        .tube {
-            position: absolute; left: 10px; top: 0; width: 20px; height: 100%;
-            border-left: 2px solid var(--plasma); border-right: 2px solid var(--plasma);
-            background: rgba(0, 255, 136, 0.1); z-index: 10;
-        }
-        .bubble {
-            position: absolute; width: 12px; height: 12px; 
-            background: var(--plasma); border-radius: 50%;
-            box-shadow: 0 0 10px var(--plasma);
-            animation: flow 1.5s infinite linear;
-        }
-        @keyframes flow {
-            0% { bottom: -20px; opacity: 0; }
-            50% { opacity: 1; }
-            100% { bottom: 100%; opacity: 0; }
-        }
-
-        /* 3. THE BUTTON DOCK - 30px Height but Thick Targets */
-        #control-dock {
-            height: 30vh; width: 100%;
-            background: #151515; border-top: 3px solid #333;
+        /* 30PX BUTTON DOCK (30%) */
+        #dock {
+            height: 30%; width: 100%; background: #111; border-top: 2px solid #333;
             display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px;
-            box-sizing: border-box;
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
-        .btn-grid { display: grid; gap: 8px; }
+        .btn-grid { display: grid; grid-template-rows: 1fr 1fr; gap: 8px; }
 
-        .console-btn {
-            height: 45px; /* Increased for finger-tap, keep 30px label internal */
-            background: #222; border: 2px solid #555;
-            color: #fff; font-size: 12px; font-weight: bold;
-            text-transform: uppercase; border-radius: 4px;
-            touch-action: manipulation; /* Fixes "not working" on tap */
+        /* THE HARD BUTTONS */
+        .sultan-btn {
+            height: 45px; /* Large touch target */
+            background: #222; border: 2px solid var(--gold);
+            color: #fff; font-weight: bold; font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 5px;
         }
-        .btn-active { border-color: var(--plasma); color: var(--plasma); }
-        .btn-magenta { border-color: var(--magenta); color: var(--magenta); }
+        .sultan-btn:active { background: var(--gold); color: #000; }
+        .btn-inject { border-color: var(--magenta); color: var(--magenta); }
+        .btn-inject:active { background: var(--magenta); color: #000; }
 
-        canvas { display: block; width: 100% !important; height: 100% !important; }
+        canvas { width: 100% !important; height: 100% !important; display: block; }
     </style>
 </head>
 <body>
 
-    <div id="hud-top">
-        <div>TICK: 00472<br>LAW: 1*1=2</div>
-        <div style="text-align:right">SPUN: 15,000<br>36° STABLE</div>
+    <div id="hud">
+        <div>LAW: 1*1=2<br>TICK: <span id="tick">0</span></div>
+        <div style="text-align:right">RPM: 15,000<br>36° STABLE</div>
     </div>
 
-    <div id="reactor-view">
+    <div id="viewport">
         <div class="tube">
             <div class="bubble" style="animation-delay: 0s"></div>
-            <div class="bubble" style="animation-delay: 0.5s"></div>
-            <div class="bubble" style="animation-delay: 1s"></div>
+            <div class="bubble" style="animation-delay: 0.4s"></div>
+            <div class="bubble" style="animation-delay: 0.8s"></div>
         </div>
         </div>
 
-    <div id="control-dock">
+    <div id="dock">
         <div class="btn-grid">
-            <button class="console-btn btn-active" onclick="trigger('BOOST')">BOOST</button>
-            <button class="console-btn btn-magenta" onclick="trigger('INJECT')">INJECT G.O.G.</button>
+            <div class="sultan-btn" onpointerdown="actuate('BOOST', 50)">BOOST</div>
+            <div class="sultan-btn" onpointerdown="actuate('CYCLE', 10)">CYCLE</div>
         </div>
         <div class="btn-grid">
-            <button class="console-btn" onclick="trigger('AUTO')">AUTO/MAN</button>
-            <button class="console-btn" onclick="trigger('GEAR')">SETTINGZ</button>
+            <div class="sultan-btn btn-inject" onpointerdown="actuate('GOG', 100)">INJECT GOG</div>
+            <div class="sultan-btn" onpointerdown="actuate('SETTINGS', 20)">SETTINGZ</div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Fix for "Buttons don't work": Added vibration and console log
-        function trigger(type) {
-            if (navigator.vibrate) navigator.vibrate(40);
-            console.log("ACTUATED:", type);
-            alert(type + " ACTIVATED"); // Added alert to PROVE it's working
+        // HAPTIC ACTUATION
+        function actuate(type, force) {
+            if (navigator.vibrate) navigator.vibrate(force);
+            console.log("SULTAN COMMAND:", type);
+            // Visual feedback for GOG law
+            if(type === 'GOG') {
+                core.material.color.setHex(0xff00ff);
+                setTimeout(() => core.material.color.setHex(0x00ffff), 150);
+            }
         }
 
-        // Standard 3D Lock-in
-        const view = document.getElementById('reactor-view');
+        // 3D CORE ENGINE
+        const view = document.getElementById('viewport');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, view.clientWidth / view.clientHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -112,14 +98,18 @@
         view.appendChild(renderer.domElement);
 
         const core = new THREE.Mesh(
-            new THREE.SphereGeometry(2, 16, 16), 
+            new THREE.SphereGeometry(2.5, 12, 12), 
             new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true})
         );
         scene.add(core);
-        camera.position.z = 8;
+        camera.position.z = 10;
 
+        let ticks = 0;
         function animate() {
             core.rotation.y += 0.01;
+            core.rotation.x += 0.005;
+            ticks++;
+            if(ticks % 20 === 0) document.getElementById('tick').innerText = ticks;
             renderer.render(scene, camera);
             requestAnimationFrame(animate);
         }
