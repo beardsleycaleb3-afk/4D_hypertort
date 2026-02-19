@@ -3,97 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Sultan Sovereign</title>
+    <title>Sultan Console</title>
     <style>
-        :root { --gold: #ffd700; --plasma: #00ff88; --magenta: #ff00ff; --panel: #0d0d0d; }
-        body, html { margin: 0; padding: 0; height: 100vh; background: #000; color: var(--gold); font-family: monospace; overflow: hidden; }
+        :root { --gold: #ffd700; --plasma: #00ff88; --magenta: #ff00ff; }
+        
+        /* 1. THE CONSOLE FRAME */
+        body, html { 
+            margin: 0; padding: 0; height: 100vh; width: 100vw;
+            background: #000; overflow: hidden; font-family: 'Courier New', monospace;
+        }
 
-        /* 1. HUD & TOP TELEMETRY */
-        #hud-header { height: 60px; display: flex; justify-content: space-between; padding: 10px 15px; background: var(--panel); border-bottom: 2px solid #222; z-index: 5; }
-        #telemetry-left { font-size: 10px; }
-        #telemetry-right { text-align: right; }
+        /* Top HUD - Fixed and Bold */
+        #hud-top {
+            height: 15vh; width: 100%; 
+            display: flex; justify-content: space-between; padding: 10px;
+            box-sizing: border-box; border-bottom: 3px solid #333;
+            background: #0a0a0a; color: var(--gold); font-weight: bold;
+        }
 
-        /* 2. MAIN VIEWPORT (70%) */
-        #reactor-main { height: 70vh; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* 2. THE REACTOR VIEW (Bubbles + 3D) */
+        #reactor-view { 
+            height: 55vh; width: 100vw; position: relative; 
+            background: radial-gradient(circle, #111, #000);
+        }
 
-        /* 3. FUSION TUBES & BUBBLES */
-        .tube { position: absolute; width: 12px; height: 70vh; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.1); left: 0; top: 0; }
-        .bubble { position: absolute; width: 6px; height: 10px; background: var(--plasma); border-radius: 50%; filter: blur(1px); animation: flow 2.5s infinite linear; opacity: 0; }
-        @keyframes flow { 0% { bottom: -10px; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 70vh; opacity: 0; } }
+        /* THE TUBE & BUBBLES - Hard Coded Visibility */
+        .tube {
+            position: absolute; left: 10px; top: 0; width: 20px; height: 100%;
+            border-left: 2px solid var(--plasma); border-right: 2px solid var(--plasma);
+            background: rgba(0, 255, 136, 0.1); z-index: 10;
+        }
+        .bubble {
+            position: absolute; width: 12px; height: 12px; 
+            background: var(--plasma); border-radius: 50%;
+            box-shadow: 0 0 10px var(--plasma);
+            animation: flow 1.5s infinite linear;
+        }
+        @keyframes flow {
+            0% { bottom: -20px; opacity: 0; }
+            50% { opacity: 1; }
+            100% { bottom: 100%; opacity: 0; }
+        }
 
-        /* 4. SETTINGZ GEAR */
-        #gear-zone { position: absolute; right: 20px; color: var(--magenta); text-align: center; }
-        .gear-s { width: 42px; height: 42px; border: 2px dashed var(--magenta); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
+        /* 3. THE BUTTON DOCK - 30px Height but Thick Targets */
+        #control-dock {
+            height: 30vh; width: 100%;
+            background: #151515; border-top: 3px solid #333;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px;
+            box-sizing: border-box;
+        }
 
-        /* 5. CONTROL DOCK (30%) */
-        #control-dock { height: calc(30vh - 60px); background: var(--panel); border-top: 2px solid #222; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; padding-bottom: env(safe-area-inset-bottom); }
-        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .console-btn { height: 30px; background: #1a1a1a; border: 1px solid #444; color: #fff; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .btn-glow { border-color: var(--plasma); color: var(--plasma); }
+        .btn-grid { display: grid; gap: 8px; }
+
+        .console-btn {
+            height: 45px; /* Increased for finger-tap, keep 30px label internal */
+            background: #222; border: 2px solid #555;
+            color: #fff; font-size: 12px; font-weight: bold;
+            text-transform: uppercase; border-radius: 4px;
+            touch-action: manipulation; /* Fixes "not working" on tap */
+        }
+        .btn-active { border-color: var(--plasma); color: var(--plasma); }
+        .btn-magenta { border-color: var(--magenta); color: var(--magenta); }
+
+        canvas { display: block; width: 100% !important; height: 100% !important; }
     </style>
 </head>
 <body>
 
-    <header id="hud-header">
-        <div id="telemetry-left">TICK: 00247<br>L©SS: 124K<br>LAW: 1*1=2</div>
-        <div id="telemetry-right">SPUN: <span id="rpm">15,000</span><br>STATUS: STABLE</div>
-    </header>
+    <div id="hud-top">
+        <div>TICK: 00472<br>LAW: 1*1=2</div>
+        <div style="text-align:right">SPUN: 15,000<br>36° STABLE</div>
+    </div>
 
-    <main id="reactor-main">
+    <div id="reactor-view">
         <div class="tube">
             <div class="bubble" style="animation-delay: 0s"></div>
-            <div class="bubble" style="animation-delay: 0.8s"></div>
-            <div class="bubble" style="animation-delay: 1.6s"></div>
+            <div class="bubble" style="animation-delay: 0.5s"></div>
+            <div class="bubble" style="animation-delay: 1s"></div>
         </div>
-        
-        <div id="gear-zone">
-            <div class="gear-s">S</div>
-            <small>SETTINGZ</small>
         </div>
 
-        <div id="canvas-target"></div>
-    </main>
-
-    <footer id="control-dock">
+    <div id="control-dock">
         <div class="btn-grid">
-            <button class="console-btn btn-glow" onclick="haptic(50)">[H] BOOST</button>
-            <button class="console-btn" onclick="haptic(10)">[∆] CYCLE</button>
-            <button class="console-btn" style="grid-column: span 2;" onclick="haptic(30)">[§] INJECT G.O.G.</button>
+            <button class="console-btn btn-active" onclick="trigger('BOOST')">BOOST</button>
+            <button class="console-btn btn-magenta" onclick="trigger('INJECT')">INJECT G.O.G.</button>
         </div>
         <div class="btn-grid">
-            <button class="console-btn">AUTO/MAN</button>
-            <button class="console-btn">MUTE</button>
-            <button class="console-btn" style="grid-column: span 2;">START MANIFOLD</button>
+            <button class="console-btn" onclick="trigger('AUTO')">AUTO/MAN</button>
+            <button class="console-btn" onclick="trigger('GEAR')">SETTINGZ</button>
         </div>
-    </footer>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // PWA REGISTRATION
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        // Fix for "Buttons don't work": Added vibration and console log
+        function trigger(type) {
+            if (navigator.vibrate) navigator.vibrate(40);
+            console.log("ACTUATED:", type);
+            alert(type + " ACTIVATED"); // Added alert to PROVE it's working
         }
 
-        // THREE.JS GEOMETRY
-        const container = document.getElementById('reactor-main');
+        // Standard 3D Lock-in
+        const view = document.getElementById('reactor-view');
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(45, view.clientWidth / view.clientHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
+        renderer.setSize(view.clientWidth, view.clientHeight);
+        view.appendChild(renderer.domElement);
 
-        const inner = new THREE.Mesh(new THREE.SphereGeometry(2, 20, 20), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true}));
-        const outer = new THREE.Mesh(new THREE.SphereGeometry(4, 15, 15), new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true, transparent: true, opacity: 0.2}));
-        scene.add(inner, outer);
-        camera.position.z = 12;
-
-        function haptic(ms) { if(navigator.vibrate) navigator.vibrate(ms); }
+        const core = new THREE.Mesh(
+            new THREE.SphereGeometry(2, 16, 16), 
+            new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true})
+        );
+        scene.add(core);
+        camera.position.z = 8;
 
         function animate() {
-            inner.rotation.y += 0.01;
-            outer.rotation.y -= 0.005;
+            core.rotation.y += 0.01;
             renderer.render(scene, camera);
             requestAnimationFrame(animate);
         }
