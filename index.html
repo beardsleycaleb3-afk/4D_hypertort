@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Sultan Sovereign: Spectral Edition</title>
+<style>
+    :root {
+        --gold: #ffd700; --plasma: #00ff88; --magenta: #ff00ff; --hud: #00ffff;
+    }
+    * { touch-action: none; user-select: none; box-sizing: border-box; }
+    html, body {
+        margin: 0; padding: 0; height: 100vh; width: 100vw; background: #000;
+        color: var(--hud); font-family: 'Courier New', monospace; overflow: hidden;
+    }
+    #hud { position: absolute; top: 0; width: 100%; height: 12%; display: flex; 
+        justify-content: space-between; padding: 15px; font-size: 11px; z-index: 10;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        text-shadow: 0 0 8px var(--hud);
+    }
+    #viewport { height: 70vh; width: 100%; position: relative; display: flex; 
+        align-items: center; justify-content: center; }
+    .tube { position: absolute; left: 15px; width: 14px; height: 85%; 
+        border: 1px solid var(--plasma); background: rgba(0,255,136,0.15); 
+        border-radius: 12px; box-shadow: 0 0 15px rgba(0,255,136,0.4); }
+    .bubble { position: absolute; width: 8px; height: 8px; background: var(--plasma); 
+        border-radius: 50%; box-shadow: 0 0 10px var(--plasma); 
+        animation: flow 1.5s infinite linear; }
+    @keyframes flow { 0% { bottom: -10px; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 100%; opacity: 0; } }
+    #gear-zone { position: absolute; right: 20px; top: 40%; text-align: center; color: var(--magenta);
+        filter: drop-shadow(0 0 6px var(--magenta)); }
+    .gear-s { width: 60px; height: 60px; border: 3px dashed var(--magenta); border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold;
+        animation: spin 3s linear infinite, pulseGear 2s ease-in-out infinite alternate; }
+    @keyframes spin { from { transform: rotate(0deg);} to {transform: rotate(360deg);} }
+    @keyframes pulseGear { from { box-shadow: 0 0 10px var(--magenta);} to { box-shadow: 0 0 30px var(--magenta);} }
+    #dock { height: 30vh; width: 100%; background: rgba(0,0,0,0.9); border-top: 2px solid #333;
+        display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; padding: 15px; z-index: 5;
+        padding-bottom: env(safe-area-inset-bottom); }
+    .btn-grid { display: grid; grid-template-rows: repeat(2, 1fr); gap: 10px; }
+    .sultan-btn { height: 48px; font-weight: bold; font-size: 12px; display: flex; align-items: center; 
+        justify-content: center; border: 2px solid var(--gold); color: var(--gold); 
+        background: rgba(255,215,0,0.1); border-radius: 8px; transition: all 0.2s; 
+        box-shadow: 0 0 8px rgba(255,215,0,0.3); }
+    .sultan-btn:active, .sultan-btn.active { background: var(--gold); color: #000; 
+        box-shadow: 0 0 25px var(--gold); }
+    .btn-gog { border-color: var(--magenta); color: var(--magenta); 
+        box-shadow: 0 0 8px rgba(255,0,255,0.4); }
+    .btn-gog:active, .btn-gog.active { background: var(--magenta); color: #000; 
+        box-shadow: 0 0 25px var(--magenta); }
+</style>
+</head>
+<body>
+<div id="hud">
+    <div id="hud-l">LAW: 1*1=2<br>TICK: <span id="tick-count">00000</span><br>STATUS: NORMAL</div>
+    <div id="hud-r" style="text-align:right">SPUN: <span id="rpm-val">15,000</span><br>L©SS: 124K<br>36° MANIFOLD</div>
+</div>
+
+<div id="viewport">
+    <div class="tube">
+        <div class="bubble" style="animation-delay:0s"></div>
+        <div class="bubble" style="animation-delay:0.5s"></div>
+        <div class="bubble" style="animation-delay:1s"></div>
+    </div>
+    <div id="gear-zone">
+        <div class="gear-s">S</div>
+        <small>SETTINGZ</small>
+    </div>
+</div>
+
+<div id="dock">
+    <div class="btn-grid">
+        <div class="sultan-btn" id="boostBtn" onpointerdown="input('BOOST', 50)">[H] BOOST</div>
+        <div class="sultan-btn" onpointerdown="input('CYCLE', 15)">[∆] CYCLE</div>
+    </div>
+    <div class="btn-grid">
+        <div class="sultan-btn btn-gog" onpointerdown="input('GOG', 100)">[§] INJECT G.O.G.</div>
+        <div class="sultan-btn" onpointerdown="input('START', 30)">START MANIFOLD</div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+let boostActive = false;
+const tickDisplay = document.getElementById('tick-count');
+const boostBtn = document.getElementById('boostBtn');
+
+// FIXED Three.js setup
+const view = document.getElementById('viewport');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(view.clientWidth, view.clientHeight);
+renderer.setClearColor(0x000000, 0); // Transparent black
+view.appendChild(renderer.domElement);
+
+// Simple working core (guaranteed to render)
+const coreGeometry = new THREE.IcosahedronGeometry(2.5, 1);
+const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: false });
+const core = new THREE.Mesh(coreGeometry, coreMaterial);
+
+const shellGeometry = new THREE.SphereGeometry(4.2, 32, 32);
+const shellMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0xff00ff, wireframe: true, transparent: true, opacity: 0.3 
+});
+const shell = new THREE.Mesh(shellGeometry, shellMaterial);
+
+scene.add(core);
+scene.add(shell);
+camera.position.z = 12;
+
+// Input handler
+function input(type, vibration) {
+    if (navigator.vibrate) navigator.vibrate(vibration);
+    
+    if (type === 'BOOST') {
+        boostActive = !boostActive;
+        boostBtn.classList.toggle('active', boostActive);
+        const hudL = document.getElementById('hud-l');
+        hudL.innerHTML = boostActive 
+            ? 'LAW: REVERSE<br>TICK: <span id="tick-count">' + tickDisplay.innerText + '</span><br>STATUS: OVERDRIVE'
+            : 'LAW: 1*1=2<br>TICK: <span id="tick-count">' + tickDisplay.innerText + '</span><br>STATUS: NORMAL';
+    }
+    if (type === 'GOG') {
+        core.material.color.setHex(0xff00ff);
+        setTimeout(() => core.material.color.setHex(0x00ffff), 300);
+    }
+}
+
+// Resize handler
+window.addEventListener('resize', () => {
+    camera.aspect = view.clientWidth / view.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(view.clientWidth, view.clientHeight);
+});
+
+// Animation loop
+let ticks = 0;
+function animate() {
+    const speed = boostActive ? 0.08 : 0.015;
+    core.rotation.y += speed;
+    shell.rotation.y -= speed * 0.5;
+    shell.rotation.x += speed * 0.2;
+    
+    ticks++;
+    if (ticks % 5 === 0) {
+        tickDisplay.textContent = ticks.toString().padStart(5, '0');
+    }
+    
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
