@@ -3,93 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Sultan Touch Console</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <title>Sultan Sovereign</title>
     <style>
-        :root { --gold: #ffd700; --plasma: #00ff88; --magenta: #ff00ff; }
-        
-        /* 1. FORCE THE LAYOUT */
+        :root { --gold: #ffd700; --plasma: #00ff88; --magenta: #ff00ff; --hud: #00ffff; }
         * { touch-action: none; user-select: none; box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100vw; background: #000; overflow: hidden; font-family: monospace; }
+        body, html { margin: 0; padding: 0; height: 100vh; width: 100vw; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
 
-        /* HUD (Zone 8) */
+        /* 1. HUD OVERLAY (Zone 8) */
         #hud {
-            height: 15%; width: 100%; border-bottom: 2px solid #333;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 15px; color: var(--gold); font-size: 12px;
+            position: absolute; top: 0; width: 100%; height: 12%; 
+            display: flex; justify-content: space-between; padding: 15px;
+            color: var(--hud); font-size: 11px; z-index: 100;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
         }
 
-        /* REACTOR VIEWPORT (70%) */
-        #viewport { height: 55%; width: 100%; position: relative; overflow: hidden; }
+        /* 2. REACTOR VIEWPORT (70%) */
+        #viewport { height: 70vh; width: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
 
-        /* PLASMA TUBES (Zone 11) */
-        .tube { position: absolute; left: 10px; width: 15px; height: 100%; border: 1px solid var(--plasma); background: rgba(0,255,136,0.1); }
-        .bubble { position: absolute; width: 10px; height: 10px; background: var(--plasma); border-radius: 50%; box-shadow: 0 0 10px var(--plasma); animation: flow 1.2s infinite linear; }
+        /* PLASMA TUBES & BUBBLES (Zone 11) */
+        .tube { position: absolute; left: 15px; width: 12px; height: 80%; border: 1px solid var(--plasma); background: rgba(0,255,136,0.05); border-radius: 10px; }
+        .bubble { position: absolute; width: 8px; height: 8px; background: var(--plasma); border-radius: 50%; box-shadow: 0 0 8px var(--plasma); animation: flow 1.5s infinite linear; }
         @keyframes flow { 0% { bottom: -10px; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 100%; opacity: 0; } }
 
-        /* 30PX BUTTON DOCK (30%) */
+        /* SETTINGZ GEAR */
+        #gear-zone { position: absolute; right: 20px; top: 40%; color: var(--magenta); text-align: center; }
+        .gear-s { width: 45px; height: 45px; border: 2px dashed var(--magenta); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; animation: spin 4s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* 3. CONTROL DOCK (30%) - 30px Buttons */
         #dock {
-            height: 30%; width: 100%; background: #111; border-top: 2px solid #333;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px;
+            height: 30vh; width: 100%; background: #0d0d0d; border-top: 2px solid #333;
+            display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; padding: 15px;
             padding-bottom: env(safe-area-inset-bottom);
         }
-
-        .btn-grid { display: grid; grid-template-rows: 1fr 1fr; gap: 8px; }
-
+        .btn-grid { display: grid; grid-template-rows: repeat(2, 1fr); gap: 10px; }
+        
         /* THE HARD BUTTONS */
         .sultan-btn {
-            height: 45px; /* Large touch target */
-            background: #222; border: 2px solid var(--gold);
-            color: #fff; font-weight: bold; font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 5px;
+            height: 45px; background: #1a1a1a; border: 2px solid var(--gold);
+            color: #fff; font-weight: bold; font-size: 12px;
+            display: flex; align-items: center; justify-content: center; border-radius: 4px;
         }
         .sultan-btn:active { background: var(--gold); color: #000; }
-        .btn-inject { border-color: var(--magenta); color: var(--magenta); }
-        .btn-inject:active { background: var(--magenta); color: #000; }
-
-        canvas { width: 100% !important; height: 100% !important; display: block; }
+        .btn-gog { border-color: var(--magenta); color: var(--magenta); }
+        .btn-gog:active { background: var(--magenta); color: #000; }
     </style>
 </head>
 <body>
 
     <div id="hud">
-        <div>LAW: 1*1=2<br>TICK: <span id="tick">0</span></div>
-        <div style="text-align:right">RPM: 15,000<br>36° STABLE</div>
+        <div id="hud-l">LAW: 1*1=2<br>TICK: <span id="tick-count">00000</span><br>STATUS: STABLE</div>
+        <div id="hud-r" style="text-align:right">SPUN: <span id="rpm-val">15,000</span><br>L©SS: 124K<br>36° MANIFOLD</div>
     </div>
 
     <div id="viewport">
         <div class="tube">
             <div class="bubble" style="animation-delay: 0s"></div>
-            <div class="bubble" style="animation-delay: 0.4s"></div>
-            <div class="bubble" style="animation-delay: 0.8s"></div>
+            <div class="bubble" style="animation-delay: 0.5s"></div>
+            <div class="bubble" style="animation-delay: 1s"></div>
         </div>
+        
+        <div id="gear-zone">
+            <div class="gear-s">S</div>
+            <small>SETTINGZ</small>
         </div>
+    </div>
 
     <div id="dock">
         <div class="btn-grid">
-            <div class="sultan-btn" onpointerdown="actuate('BOOST', 50)">BOOST</div>
-            <div class="sultan-btn" onpointerdown="actuate('CYCLE', 10)">CYCLE</div>
+            <div class="sultan-btn" onpointerdown="input('BOOST', 50)">[H] BOOST</div>
+            <div class="sultan-btn" onpointerdown="input('CYCLE', 15)">[∆] CYCLE</div>
         </div>
         <div class="btn-grid">
-            <div class="sultan-btn btn-inject" onpointerdown="actuate('GOG', 100)">INJECT GOG</div>
-            <div class="sultan-btn" onpointerdown="actuate('SETTINGS', 20)">SETTINGZ</div>
+            <div class="sultan-btn btn-gog" onpointerdown="input('GOG', 100)">[§] INJECT G.O.G.</div>
+            <div class="sultan-btn" onpointerdown="input('START', 30)">START MANIFOLD</div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // HAPTIC ACTUATION
-        function actuate(type, force) {
-            if (navigator.vibrate) navigator.vibrate(force);
-            console.log("SULTAN COMMAND:", type);
-            // Visual feedback for GOG law
-            if(type === 'GOG') {
+        // PWA SETUP
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+        // COMMAND LOGIC
+        let boostActive = false;
+        function input(type, vibration) {
+            if (navigator.vibrate) navigator.vibrate(vibration);
+            if (type === 'GOG') {
                 core.material.color.setHex(0xff00ff);
-                setTimeout(() => core.material.color.setHex(0x00ffff), 150);
+                setTimeout(() => core.material.color.setHex(0x00ffff), 200);
             }
+            if (type === 'BOOST') boostActive = !boostActive;
         }
 
-        // 3D CORE ENGINE
+        // THREE.JS ENGINE (36° Locked Geometry)
         const view = document.getElementById('viewport');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, view.clientWidth / view.clientHeight, 0.1, 1000);
@@ -97,19 +106,27 @@
         renderer.setSize(view.clientWidth, view.clientHeight);
         view.appendChild(renderer.domElement);
 
+        // Core Manifold
         const core = new THREE.Mesh(
-            new THREE.SphereGeometry(2.5, 12, 12), 
+            new THREE.SphereGeometry(2.5, 18, 18), 
             new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true})
         );
-        scene.add(core);
-        camera.position.z = 10;
+        const outer = new THREE.Mesh(
+            new THREE.SphereGeometry(4.5, 12, 12), 
+            new THREE.MeshBasicMaterial({color: 0xff6600, wireframe: true, transparent: true, opacity: 0.2})
+        );
+        scene.add(core, outer);
+        camera.position.z = 12;
 
         let ticks = 0;
         function animate() {
-            core.rotation.y += 0.01;
-            core.rotation.x += 0.005;
+            let speed = boostActive ? 0.08 : 0.01;
+            core.rotation.y += speed;
+            outer.rotation.y -= speed * 0.5;
+            
             ticks++;
-            if(ticks % 20 === 0) document.getElementById('tick').innerText = ticks;
+            if(ticks % 10 === 0) document.getElementById('tick-count').innerText = ticks.toString().padStart(5, '0');
+            
             renderer.render(scene, camera);
             requestAnimationFrame(animate);
         }
